@@ -17,16 +17,18 @@ canvas{display:block}
 #start div{max-width:460px;padding:24px;line-height:1.6}#start h1{margin:0 0 8px;color:var(--hot)}
 button{font:inherit;font-size:18px;padding:10px 28px;border:0;border-radius:10px;background:var(--hot);color:#fff;cursor:pointer;margin-top:12px}
 #vig,#flash{position:absolute;inset:0}#vig{opacity:0;transition:opacity .6s;background:radial-gradient(ellipse at center,rgba(0,0,0,0) 62%,rgba(24,0,48,.22) 100%)}#flash{opacity:0;background:radial-gradient(circle at center,rgba(255,255,255,0) 28%,rgba(150,70,255,.6) 100%)}
+#mp input{font:inherit;font-size:14px;padding:8px 10px;border-radius:8px;border:1px solid #555;background:#0e1018;color:#fff;width:110px}#mp button{font-size:14px;padding:8px 14px}#mps{display:block;margin-top:8px;font-size:13px;color:#cdb8ff;word-break:break-all}#mpl{position:absolute;left:12px;top:12px;background:var(--panel);padding:6px 10px;border-radius:8px;font-size:13px;white-space:pre}#mpl:empty{display:none}
 </style></head><body>
 <div id="hud"><div id="vig"></div><div id="flash"></div><div id="cross"></div>
 <div id="top"><b id="mode">Slime Venom</b><div id="bar"><i></i></div></div>
 <div id="hint">WASD gerak · Mouse bidik · Klik kiri semburan venom · F rasuki/lepas · Space lompat/naik · Shift lari/turun</div>
-<div id="fps">60 FPS</div><div id="score">Tumbang: 0</div></div>
+<div id="mpl"></div><div id="fps">60 FPS</div><div id="score">Tumbang: 0</div></div>
 <div id="start"><div><h1>🕷️ Venom Slime</h1>
 <p>Kamu slime venom di kota reruntuhan. Arahkan bidikan ke mobil atau hewan (burung, kanguru, beruang, ular, katak) lalu tekan <b>F</b> untuk merasukinya. Tinta venom merambat naik menutupi tubuhnya, tentakel lendir menyembur keluar, dan ia berubah hitam mengkilap bertaring. Kamu mengendalikannya sampai waktu habis, lalu kembali menjadi slime.</p>
 <p>WASD gerak · Mouse bidik · Klik kiri semburan venom<br>Space lompat / terbang naik · Shift lari / terbang turun · Mobil: W/S gas-rem, A/D belok, Space rem tangan</p>
-<button id="go">Mulai</button></div></div>
+<button id="go">Mulai</button><p id="mp" style="margin:16px 0 0"><b>🌐 Multiplayer online</b><br><input id="mpn" placeholder="Namamu" maxlength="12"> <input id="mpc" placeholder="Kode room" maxlength="5"><br><button id="mph">Buat Room</button> <button id="mpj">Gabung</button><span id="mps"></span></p></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
 const T=THREE,V=T.Vector3,PI=Math.PI,rnd=(a,b)=>a+Math.random()*(b-a),cl=(x,a,b)=>Math.max(a,Math.min(b,x));
 let seed=7;const sr=()=>(seed=(seed*16807)%2147483647)/2147483647;
@@ -316,7 +318,7 @@ else{if(e.go){p.x+=Math.sin(e.a)*s*dt;p.z+=Math.cos(e.a)*s*dt;e.g.rotation.y=e.a
 if(p.y<=.1){p.y=.1;e.vy=(e.go&&(e.type=='kang'||e.type=='frog'))?10:0}if(e.type=='snake')e.g.segs.forEach((q,i)=>q.position.x=Math.sin(t*6-i*.8)*.3)}}
 function kill(e){if(e===P.ent||!e.g.visible)return;e.hp=0;P.score++;document.getElementById('score').textContent='Tumbang: '+P.score;const q=e.g.position,c=new V(q.x,q.y+e.p.ht/2,q.z);burst(c,110,9);debris(c.x,c.y,c.z,12+(e.p.r*4|0),11,1+e.p.r*.5);shock(c,e.p.r*3+1.5,q.y+.03);shk=Math.max(shk,cl(.7-c.distanceTo(cur().g.position)/80,.15,.7));slowT=Math.max(slowT,.07);e.vt=0;e.gt=0;e.vd=0;e.ven.show(false);e.dirty=true;e.jx=0;e.shk=0;e.g.visible=false;e.rs=6}
 function shoot(c){const o=new V(c.g.position.x,c.g.position.y+c.p.ht*.6+.3,c.g.position.z);const d=aim.clone().sub(o);if(d.length()<2)d.copy(dir);d.normalize();
-o.addScaledVector(d,c.p.r+.5);const m=new T.Mesh(fbG,fbM);m.position.copy(o);m.scale.set(1,1,2.2);m.lookAt(o.clone().add(d));S.add(m);fb.push({m,v:d.multiplyScalar(85),life:1.6,dmg:(c.p.dmg||1)})}
+o.addScaledVector(d,c.p.r+.5);const m=new T.Mesh(fbG,fbM);m.position.copy(o);m.scale.set(1,1,2.2);m.lookAt(o.clone().add(d));S.add(m);mpShot(o,d);fb.push({m,v:d.multiplyScalar(85),life:1.6,dmg:(c.p.dmg||1)})}
 let lastShot=0,t=0,fpsT=0,fpsN=0,prC=Math.min(Math.max(devicePixelRatio,1.25),2),lowT=0,hiT=0;const prMax=prC;const clock=new T.Clock(),$=id=>document.getElementById(id);
 function tick(){requestAnimationFrame(tick);const rd=Math.min(clock.getDelta(),.05);slowT=Math.max(0,slowT-rd);const dt=rd*(slowT>0?.2:1);t+=dt;
 const c=cur();
@@ -335,7 +337,7 @@ if(started&&fire&&t-lastShot>.12){lastShot=t;shoot(c)}
 // fireballs
 for(let i=fb.length-1;i>=0;i--){const f=fb[i],p=f.m.position;p.addScaledVector(f.v,dt);f.life-=dt;droplet(p.x,p.y,p.z,rnd(-.8,.8),rnd(-.6,.8),rnd(-.8,.8),rnd(.18,.34),Math.random()<.3?1:0);let dead=f.life<=0||p.y<.1;
 for(const b of B)if(p.y<b.h&&Math.abs(p.x-b.x)<b.hx&&Math.abs(p.z-b.z)<b.hz)dead=true;
-for(const e of ents){if(e===P.ent||!e.g.visible)continue;if(Math.hypot(p.x-e.g.position.x,p.z-e.g.position.z)<e.p.r+.5&&p.y<e.g.position.y+e.p.ht+.6&&p.y>e.g.position.y-.5){e.bt=2.5;e.pt=0;e.jm=.7;e.shk=Math.max(e.shk,.55);shk=Math.min(1,shk+.12);if(e.type!='car'){e.hp-=f.dmg;if(e.hp<=0)kill(e)}dead=true}}
+for(const e of ents){if(f.rem||e===P.ent||!e.g.visible)continue;if(Math.hypot(p.x-e.g.position.x,p.z-e.g.position.z)<e.p.r+.5&&p.y<e.g.position.y+e.p.ht+.6&&p.y>e.g.position.y-.5){e.bt=2.5;e.pt=0;e.jm=.7;e.shk=Math.max(e.shk,.55);shk=Math.min(1,shk+.12);if(e.type!='car'){e.hp-=f.dmg;if(e.hp<=0)kill(e)}dead=true}}
 if(dead){burst(p,25,6);debris(p.x,p.y,p.z,3,7,.6);S.remove(f.m);fb.splice(i,1)}}
 // entities
 for(const e of ents){ai(e,dt,t);if(!e.g.visible){e.rs-=dt;if(e.rs<=0){const[x,z]=spot();if(e.type!='car')e.g.position.set(x,e.type=='bird'?10:.1,z);e.hp=3;e.g.visible=true}continue}
@@ -362,7 +364,7 @@ if(Math.random()<.15)droplet(q.x+rnd(-.5,.5),q.y+rnd(.3,1.3),q.z+rnd(-.5,.5),rnd
 plight.position.set(tp.x,tp.y+c.p.ht,tp.z);plight.intensity=1.4+.4*Math.sin(t*25);
 sun.position.set(tp.x+60,80,tp.z+30);sun.target.position.set(tp.x,0,tp.z);
 $('vig').style.opacity=P.ent?1:0;$('mode').textContent=P.ent?'Merasuki: '+P.ent.p.n+' 🕷️':'Slime Venom';$('bar').firstChild.style.width=(P.ent?P.timer/P.ent.p.dur*100:100)+'%';
-fxUpd(dt,rd);partUpd(dt);
+fxUpd(dt,rd);partUpd(dt);mpUpd(rd);
 const sk=shk*shk*.8;skv.set(rnd(-1,1)*sk,rnd(-1,1)*sk,rnd(-1,1)*sk);cam.position.add(skv);cam.rotation.z+=rnd(-1,1)*sk*.05;
 for(const e of ents)if(e.jx){e.g.position.x+=e.jx;e.g.position.z+=e.jz}
 R.render(S,cam);
@@ -371,5 +373,43 @@ fpsT+=rd;fpsN++;if(fpsT>.5){const f=fpsN/fpsT;$('fps').textContent=Math.round(f)
 if(started){if(f<50){lowT++;hiT=0}else if(f>=59){hiT++;lowT=0}else{lowT=hiT=0}
 if(lowT>=2&&prC>1){prC=Math.max(1,prC-.15);R.setPixelRatio(prC);pu.scale.value=R.domElement.height*.5;lowT=0}
 else if(hiT>=10&&prC<prMax){prC=Math.min(prMax,prC+.1);R.setPixelRatio(prC);pu.scale.value=R.domElement.height*.5;hiT=0}}}}
+// ===== MULTIPLAYER (PeerJS WebRTC, host = relay) =====
+const MP={peer:null,host:false,conns:{},pl:{},code:'',name:'',last:0};
+const mpS=m=>$('mps').textContent=m;
+function mpList(){const l=$('mpl');if(!MP.peer){l.textContent='';return}const n=Object.values(MP.pl).map(r=>r.n);l.textContent='🌐 Room '+MP.code+' · '+(n.length+1)+' pemain\n'+['Kamu ('+MP.name+')'].concat(n).join('\n')}
+function mpSend(d,ex){for(const k in MP.conns){if(k!==ex&&MP.conns[k].open)MP.conns[k].send(d)}}
+function mkAv(k,n){const g=new T.Group();let ht=1.8;
+if(k=='slime')add(g,new T.SphereGeometry(.9,24,16),0x040406,0,.8,0,{roughness:.2,emissive:0x3a0080,emissiveIntensity:.5});
+else{const m=build[k]();m.traverse(o=>{if(o.isMesh)o.material=vBlack});g.add(m);ht=D[k].ht+.8}
+const c=document.createElement('canvas');c.width=256;c.height=64;const x=c.getContext('2d');x.font='bold 34px system-ui';x.textAlign='center';x.fillStyle='rgba(15,15,25,.7)';x.fillRect(0,8,256,48);x.fillStyle='#e6d5ff';x.fillText(n,128,44);
+const sp=new T.Sprite(new T.SpriteMaterial({map:new T.CanvasTexture(c),depthTest:false,transparent:true}));sp.scale.set(4,1,1);sp.position.y=ht+1;sp.renderOrder=9;g.add(sp);S.add(g);return g}
+function mpDrop(id){const r=MP.pl[id];if(r){S.remove(r.g);delete MP.pl[id]}mpList()}
+function mpApply(d){
+if(d.t=='s'){let r=MP.pl[d.id];
+if(!r||r.k!==d.k||r.n!==d.n){const g=mkAv(d.k,d.n||'Pemain');if(r){g.position.copy(r.g.position);S.remove(r.g)}else g.position.set(d.x,d.y,d.z);r=MP.pl[d.id]={g,k:d.k,n:d.n,tp:new V(),ry:0,i:-1};mpList()}
+r.tp.set(d.x,d.y,d.z);r.ry=d.r;r.i=d.i}
+else if(d.t=='f'){const o=new V(...d.o),v=new V(...d.d),m=new T.Mesh(fbG,fbM);m.position.copy(o);m.scale.set(1,1,2.2);m.lookAt(o.clone().add(v));S.add(m);fb.push({m,v:v.multiplyScalar(85),life:1.6,dmg:0,rem:1})}
+else if(d.t=='x')mpDrop(d.id)}
+function mpShot(o,d){if(MP.peer)mpSend({t:'f',o:[o.x,o.y,o.z],d:[d.x,d.y,d.z]})}
+function mpUpd(rd){if(!MP.peer)return;const now=performance.now();
+if(now-MP.last>66){MP.last=now;const c=cur(),p=c.g.position;mpSend({t:'s',id:MP.peer.id,n:MP.name,x:+p.x.toFixed(2),y:+p.y.toFixed(2),z:+p.z.toFixed(2),r:+c.g.rotation.y.toFixed(2),k:P.ent?P.ent.type:'slime',i:P.ent?ents.indexOf(P.ent):-1})}
+const held=new Set();
+for(const id in MP.pl){const r=MP.pl[id];r.g.position.lerp(r.tp,1-Math.pow(.0005,rd));r.g.rotation.y=angLerp(r.g.rotation.y,r.ry,Math.min(1,12*rd));if(r.i>=0)held.add(r.i)}
+for(let i=0;i<ents.length;i++){const e=ents[i];if(held.has(i)&&e!==P.ent){e.g.visible=false;e.rs=99;e.mpH=1}else if(e.mpH){e.mpH=0;e.g.visible=true;e.rs=0}}}
+function mpLeave(m){for(const id in MP.pl)S.remove(MP.pl[id].g);MP.pl={};MP.conns={};if(MP.peer)MP.peer.destroy();MP.peer=null;mpS(m);mpList()}
+function mpHost(tries){const code=Array.from({length:5},()=>'ABCDEFGHJKMNPQRSTUVWXYZ23456789'[Math.random()*31|0]).join('');mpS('Membuat room…');const p=new Peer('venoz-'+code);
+p.on('open',()=>{MP.peer=p;MP.code=code;MP.host=true;mpS('Room '+code+' siap. Bagikan link: '+location.origin+location.pathname+'?room='+code);mpList()});
+p.on('connection',c=>{c.on('open',()=>{MP.conns[c.peer]=c});c.on('data',d=>{d.id=c.peer;mpApply(d);mpSend(d,c.peer)});
+c.on('close',()=>{delete MP.conns[c.peer];mpDrop(c.peer);mpSend({t:'x',id:c.peer})})});
+p.on('error',e=>{if(e.type=='unavailable-id'&&tries<5){p.destroy();mpHost(tries+1)}else mpS('Gagal: '+e.type)})}
+function mpJoin(code){if(code.length<4){mpS('Isi kode room dulu');return}mpS('Menyambung…');const p=new Peer();
+p.on('open',()=>{const c=p.connect('venoz-'+code,{reliable:true});
+c.on('open',()=>{MP.peer=p;MP.code=code;MP.host=false;MP.conns.host=c;mpS('Tersambung ke room '+code+' ✔ Tekan Mulai');mpList()});
+c.on('data',mpApply);c.on('close',()=>mpLeave('Host keluar dari room'))});
+p.on('error',e=>{mpS(e.type=='peer-unavailable'?'Room tidak ditemukan':'Gagal: '+e.type)})}
+function mpInit(host){if(typeof Peer=='undefined'){mpS('Library multiplayer gagal dimuat (cek internet)');return}if(MP.peer){mpS('Sudah di dalam room');return}
+MP.name=($('mpn').value||'Venom'+(10+Math.random()*90|0)).trim().slice(0,12);host?mpHost(0):mpJoin($('mpc').value.trim().toUpperCase())}
+$('mph').onclick=()=>mpInit(true);$('mpj').onclick=()=>mpInit(false);
+{const q=new URLSearchParams(location.search).get('room');if(q){$('mpc').value=q.toUpperCase().slice(0,5);mpInit(false)}}
 tick();
 </script></body></html>
